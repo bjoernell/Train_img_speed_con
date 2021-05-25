@@ -21,13 +21,13 @@ while(True):
     #gen hsv img and mask
     hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
     #Deckenlicht:
-    #lowGray = np.array([0,30,0])
-    #highGray = np.array([50,140,80])
+    lowGray = np.array([3,15,50])
+    highGray = np.array([30,50,165])
     #Tageslicht:
-    lowGray = np.array([80,50,20])
-    highGray = np.array([115,165,240])
+    #lowGray = np.array([80,50,20])
+    #highGray = np.array([115,165,240])
     mask = cv.inRange(hsv, lowGray, highGray)
-
+    edges = cv.Canny(mask, 100, 200)
     #Groeßte Kontur finden    
     contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     largest_contour_area = 0
@@ -52,19 +52,26 @@ while(True):
         cv.line(frame, pt1=(cX1,cY1), pt2=(320,frame_height), color=(0,0,255), thickness=5)
     
         #angle calculation
-        if cX1 != 176:
-            m = (640-cY1)/(176-cX1)
-            degree = round(abs(math.degrees(math.atan(m))))
-            
+        if cX1 != 320:
+            m = (cY1-480)/(cX1-320)
+            degree = round(abs(math.degrees(math.atan(m))))  
+
         #speed calculation and transmission
-            motor_pwm = (0.12 * degree*degree) - (16.66 * degree) + 650     #Max Speed PWM = 50
-            print(str(degree) + (" ; ") + str(motor_pwm))
-            i2c_com.transmitSpeed(motor_pwm)
+            if degree > 85:
+                motor_pwm = degree-50    #Max Speed PWM = 50
+            elif degree < 80 and degree > 40:
+                motor_pwm = 20
+            else: 
+                motor_pwm = 25
+        
+        i2c_com.transmitSpeed(motor_pwm)
+        print(degree , ";" , motor_pwm)
 
     # Display the resulting frame
     cv.imshow('binary', mask)
     cv.imshow('hsv', hsv)
     cv.imshow('original',frame)
+    cv.imshow('canny', edges)
 
     #stop when q pressed
     if cv.waitKey(1) & 0xFF == ord('q'):
